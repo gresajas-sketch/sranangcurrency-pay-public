@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sranangcurrency Pay | SRA</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f2f6f3;color:#173d2d}
+header{background:linear-gradient(135deg,#003b2b,#086a49);color:white;text-align:center;padding:35px 15px}
+.logo{width:130px;height:130px;object-fit:contain;border-radius:50%}
+h1{font-size:30px;margin:12px 0}
+main{max-width:650px;margin:24px auto;padding:24px;background:white;border-radius:18px;box-shadow:0 4px 20px #0001}
+.tabs{display:flex;gap:10px}
+button{border:0;border-radius:10px;padding:15px;cursor:pointer;font-size:16px}
+.tabs button{flex:1;background:#e6eee8;color:#173d2d}
+.tabs button.active{background:#07543b;color:white}
+label{display:block;font-weight:bold;margin:20px 0 8px}
+input{width:100%;padding:14px;border:1px solid #bccfc2;border-radius:10px;font-size:16px}
+.primary{background:#e7b83e;color:#173d2d;font-weight:bold;width:100%;margin-top:22px}
+#result{display:none;text-align:center;margin-top:25px;overflow-wrap:anywhere}
+#qr{max-width:100%;width:290px;padding:12px;background:white}
+.notice{background:#fff4d6;padding:14px;border-radius:10px;margin-top:20px}
+.small{font-size:13px;color:#53675a;line-height:1.6}
+footer{text-align:center;padding:22px;font-size:13px}
+a{color:#07543b}
+</style>
+</head>
+<body>
+<header>
+<img class="logo" src="4E8937C9-7715-49A0-93E5-640E3D7A8556.png" alt="Sranangcurrency logo">
+<h1>Sranangcurrency Pay</h1>
+<p>Global Payments · Powered by Solana</p>
+<p>STRONGER TOGETHER</p>
+</header>
+<main>
+<div class="tabs">
+<button id="shop" class="active" onclick="mode='Winkelier';switchTab()">🏪 Winkeliers</button>
+<button id="person" onclick="mode='Particulier';switchTab()">👤 Particulieren</button>
+</div>
+<p id="intro">Maak een SRA-betaalverzoek voor jouw winkel.</p>
+<label for="wallet">Openbaar Solana-ontvangstadres</label>
+<input id="wallet" placeholder="Plak je openbare walletadres" autocomplete="off">
+<p class="small">Gebruik nooit je herstelzin of privésleutel.</p>
+<label for="amount">Bedrag in SRA</label>
+<input id="amount" type="number" min="0.000001" step="0.000001" value="1">
+<label for="description">Omschrijving (optioneel)</label>
+<input id="description" maxlength="100" placeholder="Bijvoorbeeld bestelling 001">
+<button class="primary" onclick="makeQR()">Maak betaal-QR</button>
+<section id="result">
+<h2>Jouw betaalverzoek</h2>
+<img id="qr" alt="Solana Pay QR-code">
+<p id="details"></p>
+<p class="notice">Betaalverzoek aangemaakt — betaling NIET bevestigd.</p>
+<button class="primary" onclick="copyLink()">Kopieer betaallink</button>
+<p><a id="solscan" target="_blank" rel="noopener noreferrer">Controleer ontvangstadres op Solscan</a></p>
+</section>
+<div class="notice small"><strong>Testversie:</strong> Deze website maakt betaalverzoeken maar controleert betalingen niet automatisch. Controleer de echte SRA-tokenoverdracht voordat je goederen of diensten levert. Niet elke wallet ondersteunt SPL-tokenbetalingen via Solana Pay.</div>
+</main>
+<footer>© 2026 Sranangcurrency · STRONGER TOGETHER</footer>
+<script>
+const MINT="Fi5t5fguhf6L2fXy2qjnazGUdLrLmao5nbHMBWQCboXB";
+let mode="Winkelier";
+let paymentLink="";
+function switchTab(){
+document.getElementById("shop").classList.toggle("active",mode==="Winkelier");
+document.getElementById("person").classList.toggle("active",mode==="Particulier");
+document.getElementById("intro").textContent=mode==="Winkelier"?"Maak een SRA-betaalverzoek voor jouw winkel.":"Vraag SRA aan vrienden, familie of klanten.";
+document.getElementById("result").style.display="none";
+paymentLink="";
+}
+function validAddress(s){
+if(!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(s))return false;
+try{
+let n=0n;
+const abc="123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+for(const c of s)n=n*58n+BigInt(abc.indexOf(c));
+let bytes=0;
+while(n>0n){bytes++;n>>=8n;}
+for(const c of s){if(c==="1")bytes++;else break;}
+return bytes===32;
+}catch(e){return false;}
+}
+function makeQR(){
+const wallet=document.getElementById("wallet").value.trim();
+const amountText=document.getElementById("amount").value.trim();
+const description=document.getElementById("description").value.trim();
+if(!validAddress(wallet)){alert("Vul een geldig openbaar Solana-walletadres in.");return;}
+if(!/^\d+(\.\d{1,6})?$/.test(amountText)||Number(amountText)<=0||!Number.isFinite(Number(amountText))){
+alert("Vul een positief SRA-bedrag in, maximaal 6 decimalen.");return;
+}
+const params=new URLSearchParams();
+params.set("amount",amountText);
+params.set("spl-token",MINT);
+params.set("label","Sranangcurrency Pay");
+if(description)params.set("message",description);
+paymentLink="solana:"+wallet+"?"+params.toString();
+document.getElementById("qr").src="https://api.qrserver.com/v1/create-qr-code/?size=350x350&data="+encodeURIComponent(paymentLink);
+document.getElementById("details").textContent=amountText+" SRA · "+mode+" · "+wallet;
+document.getElementById("solscan").href="https://solscan.io/account/"+encodeURIComponent(wallet);
+document.getElementById("result").style.display="block";
+}
+async function copyLink(){
+if(!paymentLink)return;
+try{await navigator.clipboard.writeText(paymentLink);alert("Betaallink gekopieerd.");}
+catch(e){prompt("Kopieer deze betaallink:",paymentLink);}
+}
+</script>
+</body>
+</html>
